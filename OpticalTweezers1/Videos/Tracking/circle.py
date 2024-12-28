@@ -20,7 +20,7 @@ minDist = 200
 
 dimensions = np.uint16((videocap.get(3), videocap.get(4)))
 original_fps = videocap.get(cv.CAP_PROP_FPS)
-
+time_step = 1 / original_fps
 # Output video
 outputvid = cv.VideoWriter(f"{filename}_tracked.mp4",
 	cv.VideoWriter_fourcc(*'mp4v'), original_fps, dimensions)
@@ -30,6 +30,8 @@ if videocap.isOpened():
 else:
 	success = False
 
+time = 0
+text_pos = (50, 50)
 while success:
 	# Reading video
 	success, frame = videocap.read()
@@ -60,7 +62,15 @@ while success:
 		# Circle center
 		cv.circle(frame, (a, b), 3, (0, 0, 255), -1)
 
+
+	frame = cv.putText(frame, f"t = {time:.2f}s", text_pos, cv.FONT_HERSHEY_TRIPLEX,
+		1, (255, 255, 255), 1, cv.LINE_AA)
+
+	cv.waitKey(0)
+
 	outputvid.write(frame)
+
+	time += time_step
 	#cv.imshow('Writing Video', frame)
 
 	#if cv.waitKey(1) == 27: 
