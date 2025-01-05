@@ -55,45 +55,9 @@ def detect_edges(img: ndarray, threshold: int,
     # Converting image to binary map with threshold.
 	img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 	# TODO: Is there any gain in letting configure 255 upper bound?
+	# I think yes.
 	# TODO: Colored image support. Take differences in pixels.
 	img_bw = cv.threshold(img, threshold, 255, cv.THRESH_BINARY)[1]
-
-	# Edge detection kernel
-	# kernel = np.array([
-	# 	[-1, -1, -1],
-	# 	[-1, 8, -1],
-	# 	[-1, -1, -1],
-	# ])
-	# kernel = np.array([
-	# 	[-1, -1, -1, -1, -1],
-	# 	[-1, -1, -1, -1, -1],
-	# 	[-1, -1, 14, -1, -1],
-	# 	[-1, -1, -1, -1, -1],
-	# 	[-1, -1, -1, -1, -1],
-	# ])
-	# kernel = np.array([
-	# 	[-1, -1, -1, -1, -1, -1, -1],
-	# 	[-1, -1, -1, -1, -1, -1, -1],
-	# 	[-1, -1, -1, -1, -1, -1, -1],
-	# 	[-1, -1, -1, -1, -1, -1, -1],
-	# 	[-1, -1, -1, 48, -1, -1, -1],
-	# 	[-1, -1, -1, -1, -1, -1, -1],
-	# 	[-1, -1, -1, -1, -1, -1, -1],
-	# 	[-1, -1, -1, -1, -1, -1, -1],
-	# 	[-1, -1, -1, -1, -1, -1, -1],
-	# ])
-	# kernel = (1 / 81) * np.array([
-	# 	[-1, -1, -1, -1, -1, -1, -1, -1, -1],
-	# 	[-1, -1, -1, -1, -1, -1, -1, -1, -1],
-	# 	[-1, -1, -1, -1, -1, -1, -1, -1, -1],
-	# 	[-1, -1, -1, -1, -1, -1, -1, -1, -1],
-	# 	[-1, -1, -1, -1, 80, -1, -1, -1, -1],
-	# 	[-1, -1, -1, -1, -1, -1, -1, -1, -1],
-	# 	[-1, -1, -1, -1, -1, -1, -1, -1, -1],
-	# 	[-1, -1, -1, -1, -1, -1, -1, -1, -1],
-	# 	[-1, -1, -1, -1, -1, -1, -1, -1, -1],
-	# ])
-	#edges = cv.filter2D(src=img_bw, ddepth=-1, kernel=kernel)
 
 	y_kernel = np.array([
 		[-1, -2, -1],
@@ -214,7 +178,7 @@ def show_circle(img, center, radius, img_bw, edges, kernel, center_filter):
 	#figManager.full_screen_toggle()
 	plt.show()
 
-# TODO: Taking too much time to build kernel.
+
 #%% main()
 def main():
 	import os
