@@ -1,7 +1,7 @@
 {
     "main": {
         "eyeK3.mp4": {
-            "dir": "C:/Users/Laevateinn/Pictures/Tracking",
+            "dir": "../../../Pictures/Tracking",
             "radius": 37,
             "padding": 1,
             "threshold": 70,
