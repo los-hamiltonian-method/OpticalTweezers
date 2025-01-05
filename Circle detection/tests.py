@@ -18,17 +18,10 @@ A = np.array([
 	[h, h, h, h, h, 255],
 	[h, h, h, h, h, h],
 	[h, h, h, h, h, h],
-	[h, h, h, h, h, h],
+	[h, h, 244, h, h, h],
 	[h, h, h, h, h, h],
 ])
-A = cv.imread('./filter.png')
-Max = argmax2d(A)
-print(A.argmax())
-print(A.shape)
+A[A <= 243] = 0
 print(A)
-A[Max] = 0
-print(A.argmax())
-print(Max)
-A = cv.circle(A, Max[::-1], radius=1, thickness=3, color=(0, 255, 0))
 plt.imshow(A)
 plt.show()

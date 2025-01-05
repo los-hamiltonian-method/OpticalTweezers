@@ -59,15 +59,57 @@ def detect_edges(img: ndarray, threshold: int,
 	img_bw = cv.threshold(img, threshold, 255, cv.THRESH_BINARY)[1]
 
 	# Edge detection kernel
-	kernel = np.array([
-		[-1, -1, -1],
-		[-1, 8, -1],
-		[-1, -1, -1],
-	])
-	edges = cv.filter2D(src=img_bw, ddepth=-1, kernel=kernel)
+	# kernel = np.array([
+	# 	[-1, -1, -1],
+	# 	[-1, 8, -1],
+	# 	[-1, -1, -1],
+	# ])
+	# kernel = np.array([
+	# 	[-1, -1, -1, -1, -1],
+	# 	[-1, -1, -1, -1, -1],
+	# 	[-1, -1, 14, -1, -1],
+	# 	[-1, -1, -1, -1, -1],
+	# 	[-1, -1, -1, -1, -1],
+	# ])
+	# kernel = np.array([
+	# 	[-1, -1, -1, -1, -1, -1, -1],
+	# 	[-1, -1, -1, -1, -1, -1, -1],
+	# 	[-1, -1, -1, -1, -1, -1, -1],
+	# 	[-1, -1, -1, -1, -1, -1, -1],
+	# 	[-1, -1, -1, 48, -1, -1, -1],
+	# 	[-1, -1, -1, -1, -1, -1, -1],
+	# 	[-1, -1, -1, -1, -1, -1, -1],
+	# 	[-1, -1, -1, -1, -1, -1, -1],
+	# 	[-1, -1, -1, -1, -1, -1, -1],
+	# ])
+	# kernel = (1 / 81) * np.array([
+	# 	[-1, -1, -1, -1, -1, -1, -1, -1, -1],
+	# 	[-1, -1, -1, -1, -1, -1, -1, -1, -1],
+	# 	[-1, -1, -1, -1, -1, -1, -1, -1, -1],
+	# 	[-1, -1, -1, -1, -1, -1, -1, -1, -1],
+	# 	[-1, -1, -1, -1, 80, -1, -1, -1, -1],
+	# 	[-1, -1, -1, -1, -1, -1, -1, -1, -1],
+	# 	[-1, -1, -1, -1, -1, -1, -1, -1, -1],
+	# 	[-1, -1, -1, -1, -1, -1, -1, -1, -1],
+	# 	[-1, -1, -1, -1, -1, -1, -1, -1, -1],
+	# ])
+	#edges = cv.filter2D(src=img_bw, ddepth=-1, kernel=kernel)
 
+	y_kernel = np.array([
+		[-1, -2, -1],
+		[0, 0, 0],
+		[1, 2, 1]
+	])
+	x_kernel = np.transpose(y_kernel)
+	y_deriv = cv.filter2D(src=img_bw, ddepth=-1, kernel=y_kernel)
+	x_deriv = cv.filter2D(src=img_bw, ddepth=-1, kernel=x_kernel)
+	inv_y_deriv = cv.filter2D(src=img_bw, ddepth=-1, kernel=-y_kernel)
+	inv_x_deriv = cv.filter2D(src=img_bw, ddepth=-1, kernel=-x_kernel)
+	edges = np.sqrt(x_deriv**2 + y_deriv**2
+					+ inv_y_deriv**2 + inv_x_deriv**2).astype(float)
+	edges = 255 * edges / np.max(edges)
 	if show:
-		cv.imshow('Binary map', img)
+		cv.imshow('Binary map', img_bw)
 		cv.imshow('Detected edges', edges)
 		cv.waitKey(0)
 		cv.destroyAllWindows()
@@ -136,8 +178,8 @@ def detect_circle(img: ndarray, radius: int, threshold1: int,
 	center = center[::-1]
 	img = cv.circle(img, center, radius=0, color=(0, 0, 255),
 					thickness=3)
-	img = cv.circle(img, center, radius=radius, color=(0, 255, 255),
-					thickness=2)
+	img = cv.circle(img, center, radius=radius, color=(0, 0, 255),
+					thickness=1)
 	if show:
 		show_circle(img, center, radius, img_bw,
 					edges, kernel, center_filter)
@@ -167,7 +209,7 @@ def show_circle(img, center, radius, img_bw, edges, kernel, center_filter):
 		ax[key].set(title=title)
 
 	# Show
-	plt.subplots_adjust(hspace=0.35, wspace=0.55)
+	plt.subplots_adjust(hspace=0, wspace=0.35)
 	#figManager = plt.get_current_fig_manager()
 	#figManager.full_screen_toggle()
 	plt.show()
@@ -185,27 +227,23 @@ def main():
 	# img_name = 'micro2.bmp'
 	# img_name = 'eye.webp'
 	# radius
-	# micro: 49
-	# micro 2: 74.5
-	# iris: 301 / 2, 2, 120
-	# pupil: 77, 2, 90
+	# micro: 42, 1, 81
+	# micro 2: 67, 1, 78
+	# iris: 150, 1, 140
+	# pupil: 61, 1, 40
 
 	img_dir = './Circle detection/images/'
-	img_name = 'eye.webp'
+	img_name = 'micro.png'
 	img = cv.imread(os.path.join(img_dir, img_name))
 	
 	# Kernel params
-	radius = 62
-	padding = 2
+	radius = 42
+	padding = 1
 	kernel = build_kernel(radius=radius, padding=padding)
 
 	# Params
-	threshold = 40
-	img_center = (358, 251)
-	#crop_D = (90, 90)
-	#crop_D = (200, 200)
+	threshold = 81
 	img_center = None
-	crop_D = (200, 200)
 	crop_D = None
 
 	detect_circle(img, radius=radius, kernel=kernel, show=True,

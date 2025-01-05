@@ -2,9 +2,11 @@ import cv2 as cv
 import os
 from typing import Tuple
 from numpy import ndarray
+import json
 from circle import *
 
-def getVideoWriter(video_dir: str, video_file: str) -> cv.VideoWriter:
+def get_VideoWriter(video_dir: str, video_file: str,
+	videocap: cv.VideoCapture) -> cv.VideoWriter:
 	# Output parameters
 	dimensions = int(videocap.get(3)), int(videocap.get(4))
 	fps = videocap.get(5)
@@ -17,47 +19,73 @@ def getVideoWriter(video_dir: str, video_file: str) -> cv.VideoWriter:
 		encoder, fps, dimensions)
 	return output
 
-def put_text(img: ndarray, text: str, position: Tuple[int, int]):
-	output = cv.putText(img, f"{t:.2f}s", text_pos, cv.FONT_HERSHEY_TRIPLEX,
+def write_text(img: ndarray, text: str, position: Tuple[int, int]):
+	output = cv.putText(img, text, position, cv.FONT_HERSHEY_TRIPLEX,
 		1, (255, 255, 255), 1, cv.LINE_AA)
 	return output
 
+def get_tracking_parameters(img_filename, json_path):
+	with open(json_path, 'r') as f:
+		data = json.load(f)
+	data = data['main'][img_filename]
+	global video_dir
+	video_dir = data['dir']
+	global radius, padding
+	radius, padding = data['radius'], data['padding']
+	global threshold
+	threshold = data['threshold']
+	global img_center, crop_D
+	img_center, crop_D = data['img_center'], data['crop_D']
+	global kernel
+	kernel = build_kernel(radius, padding)
+
 def get_circle(img: ndarray, show: bool = False, return_all: bool = False):
 	'''Returns circle center and adds circle on image.'''
-	radius = 27
-	padding = 1
-	threshold = 65
-	kernel = build_kernel(radius, padding)
 	detected = detect_circle(img, radius, threshold, kernel, show=show,
+							 img_center=img_center, crop_D=crop_D,
 							 return_all=return_all)
 	return detected
 
-video_dir = './Images/06-12-24/2um_microparticles'
-video_file = '2um_laser-browniano_3.mp4'
+def progress(i, N):
+	percent = round(100 * i / N, 2)
+	print(f"Processed {i} / {N} frames ({percent}%)")
 
-# Loading video
-videocap = cv.VideoCapture(os.path.join(video_dir, video_file))
-success, frame = videocap.read()
-if not success:
-	raise FileNotFoundError(f"'{video_path}' doesn't exist!")
+def main():
+	video_file = '2um_laser-browniano_3.mp4'
+	json_path = './Images/tracking.json'
+	get_tracking_parameters(video_file, json_path)
 
-time_step = 1 / videocap.get(5)
-output = getVideoWriter(video_dir, video_file)
-frame = get_circle(frame, True)[-1]
-output.write(frame)
-
-t = 0
-i = 0
-text_pos = (30, 30)
-while success:
+	# Loading video
+	videocap = cv.VideoCapture(os.path.join(video_dir, video_file))
 	success, frame = videocap.read()
 	if not success:
-		break
-	frame = put_text(frame, f"{t:.2f}s", text_pos)
-	frame = get_circle(frame)[1]
-	i += 1
-	t += time_step
+		raise FileNotFoundError(f"'{video_path}' doesn't exist!")
 
-# Release
-output.release()
-videocap.release()
+	# Text params
+	total_frames = int(videocap.get(7))
+	text_pos, t, i = (30, 50), 0, 0
+
+	# Getting videowriter and first frame
+	time_step = 1 / videocap.get(5)
+	output = get_VideoWriter(video_dir, video_file, videocap)
+	frame = write_text(frame, f"{i + 1} - {t:.2f}s", text_pos)
+	frame = get_circle(frame, True)[-1]
+	output.write(frame)
+
+	while success:
+		progress(i + 1, total_frames)
+		success, frame = videocap.read()
+		if not success:
+			break
+		frame = write_text(frame, f"{i + 1} - {t:.2f}s", text_pos)
+		frame = get_circle(frame)[1]
+		output.write(frame)
+		i += 1
+		t += time_step
+
+	# Release
+	output.release()
+	videocap.release()
+
+if __name__ == '__main__':
+	main()
