@@ -1,0 +1,74 @@
+def main():
+	#%% Imports
+	import os
+	import sys
+	tictac_path = r"C:\Users\Laevateinn\Documents\GitHub\MiniPys\tictac"
+	formatter_path = r"C:\Users\Laevateinn\Documents\GitHub\MiniPys\Formatter"
+	sys.path.insert(0, tictac_path)
+	sys.path.insert(0, formatter_path)
+	from tictac import TicTac
+	import minipy_formatter as MF
+	from scipy.optimize import curve_fit
+
+	# Images
+	# img_name = 'micro.png'
+	# img_name = 'micro2.bmp'
+	# img_name = 'eye.webp'
+	# radius
+	# micro: 49
+	# micro 2: 74.5
+	# iris: 148
+
+	def precode(i):
+		img_dir = './Circle detection/images/'
+		img_name = 'eye.webp'
+		global img
+		img = cv.imread(os.path.join(img_dir, img_name))
+		
+		# Kernel params
+		global radius
+		radius = int(301 / 2)
+		padding = 2
+		global kernel
+		kernel = build_kernel(radius=radius, padding=padding)
+
+		# Params
+		global threshold
+		threshold = 120
+		global img_center
+		img_center = (358, 251)
+		img_center = None
+		global crop_D
+		#crop_D = (90, 90)
+		crop_D = (200, 200)
+
+	def code(i):
+		for _ in range(i):
+			detect_circle(img, radius=radius, kernel=kernel, show=True,
+				threshold1=threshold, img_center=img_center, crop_D=crop_D)
+
+	#%% Tests
+	# Format
+	MF.Format().rcUpdate()
+	colors = MF.Colors(('miku', '#5dd4d8'), ('rin', '#ecd38c'),
+                    ('darkrin', '#c6b176'), ('lgray', '#c0c0c0'))
+
+	# O(n) test
+	name = "Single circle identification"
+	variable = "Number of images identified (#)"
+	low_bound, up_bound, step = 1, 1002, 200
+	test = TicTac(name=name, variable=variable, up_bound=up_bound,
+				 low_bound=low_bound, step=step, precode=precode, code=code)
+	fig, ax = test.plot()
+
+	# Trying a linear fit
+	f = lambda n, a: a * n
+	opt, cov = curve_fit(f, test.n, test.t)
+    
+    # Plots
+	N = np.array([low_bound, up_bound])
+	ax.plot(N, f(N, opt[0]),
+            label=f"$m = {opt[0]:.4f}$"
+            	  f"\n$\\mathcal{{O}}(n)$  Variance $= {cov[0, 0]:.3E}$")
+	ax.legend(fontsize=20)
+	plt.show()

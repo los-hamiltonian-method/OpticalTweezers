@@ -2,7 +2,7 @@ import cv2 as cv
 import os
 import numpy as np
 
-videopath = "../06-12-24/2um_microparticles"
+videopath = "../Images/06-12-24/2um_microparticles"
 filename = "2um_laser-browniano_3"
 fullpath = os.path.join(videopath, filename + ".mp4")
 videocap = cv.VideoCapture(fullpath)
@@ -74,7 +74,7 @@ while success:
 	#cv.imshow('Writing Video', frame)
 
 	#if cv.waitKey(1) == 27: 
-	#	break
+		#break
 
 cv.destroyAllWindows()
 outputvid.release()
