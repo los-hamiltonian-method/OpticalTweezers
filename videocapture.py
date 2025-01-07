@@ -20,9 +20,9 @@ def get_VideoWriter(video_dir: str, video_file: str,
 	return output
 
 def write_text(img: ndarray, text: str, position: Tuple[int, int]):
-	output = cv.putText(img, text, position, cv.FONT_HERSHEY_TRIPLEX,
+	img = cv.putText(img, text, position, cv.FONT_HERSHEY_TRIPLEX,
 		1, (255, 255, 255), 1, cv.LINE_AA)
-	return output
+	return img
 
 def get_tracking_parameters(img_filename, json_path):
 	with open(json_path, 'r') as f:

@@ -152,12 +152,14 @@ def get_centers(img: ndarray, center_filter: ndarray, radius: int,
 		center_filter = cv.circle(center_filter, center, radius=separation_D,
 								  color=(0, 0, 0), thickness=-1)
 		center += center_modifier[::-1]
+		img = draw_circle(img, center, radius)
 		centers.append(center)
 	
-	# centers = sortUpperLeftFirst(centers)
+	centers = filter(lambda c: c[0]**2 + c[1]**2, centers)
 	for i, center in enumerate(centers):
-		img = draw_circle(img, center, radius)
-		# img.labelCircle(i)
+		position = (np.array(center) + 1.1 * np.array(-radius, radius)).astype(float)
+		img = cv.putText(img, st(i), position, cv.FONT_HERSHEY_TRIPLEX,
+						 1, (255, 255, 255), 1, cv.LINE_AA)
 	return centers, img
 
 def draw_circle(img: ndarray, center: int, radius: int):
