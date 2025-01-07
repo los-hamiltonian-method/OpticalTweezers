@@ -2,6 +2,7 @@
     "main": {
         "eyeK3.mp4": {
             "dir": "../../../Pictures/Tracking",
+            "n_circles": 1,
             "radius": 37,
             "padding": 1,
             "threshold": 70,
@@ -16,17 +17,12 @@
         },
         "2um_laser-browniano_3.mp4": {
             "dir": "./Images/06-12-24/2um_microparticles",
-            "radius": 27,
+            "n_circles": 2,
+            "radius": 26,
             "padding": 1,
             "threshold": 65,
-            "img_center": [
-                445,
-                134
-            ],
-            "crop_D": [
-                100,
-                100
-            ]
+            "img_center": null,
+            "crop_D": null
         }
     }
 }

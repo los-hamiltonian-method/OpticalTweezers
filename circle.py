@@ -6,10 +6,9 @@ import matplotlib.pyplot as plt
 from typing import Tuple, Optional
 
 ndarray = np.ndarray
-def detect_edges(img: ndarray, threshold: int, 
-	center: Optional[Tuple[int, int]] = None,
-	crop_D: Optional[Tuple[int, int]] = None,
-	show=False) -> Tuple[ndarray, ndarray]:
+optuple = Optional[Tuple[int, int]]
+def detect_edges(img: ndarray, threshold: int, center: optuple = None,
+	crop_D: optuple = None) -> Tuple[ndarray, ndarray]:
 	'''
 	Detects edges on image array by converting image to binary map and then
 	applying and edge detection kernel.
@@ -59,6 +58,8 @@ def detect_edges(img: ndarray, threshold: int,
 	# TODO: Colored image support. Take differences in pixels.
 	img_bw = cv.threshold(img, threshold, 255, cv.THRESH_BINARY)[1]
 
+	# TODO: I think I can do this with a convolution composition
+	# and make a pass with a single array.
 	y_kernel = np.array([
 		[-1, -2, -1],
 		[0, 0, 0],
@@ -72,15 +73,9 @@ def detect_edges(img: ndarray, threshold: int,
 	edges = np.sqrt(x_deriv**2 + y_deriv**2
 					+ inv_y_deriv**2 + inv_x_deriv**2).astype(float)
 	edges = 255 * edges / np.max(edges)
-	if show:
-		cv.imshow('Binary map', img_bw)
-		cv.imshow('Detected edges', edges)
-		cv.waitKey(0)
-		cv.destroyAllWindows()
 	return img_bw, edges
 
-def build_kernel(radius: int = 100, padding: int = 5,
-	show=False) -> ndarray:
+def build_kernel(radius: int = 100, padding: int = 5) -> ndarray:
 	'''Builds a single disk kernel array.'''
 	min_R = radius - padding
 	max_R = radius + padding
@@ -93,26 +88,15 @@ def build_kernel(radius: int = 100, padding: int = 5,
 	kernel = np.array(kernel).astype(float)
 	# Weighting kernel based on center circle.
 	kernel = kernel / (2 * np.pi * radius)
-
-	if show:
-		cv.imshow('kernel', kernel)
-		cv.waitKey(0)
-		cv.destroyAllWindows()
-	
 	return kernel
 
-def filter_center(edges: ndarray, kernel: ndarray, threshold: int = None,
-	show=False) -> Tuple[ndarray, ndarray]:
+def filter_center(edges: ndarray, kernel: ndarray,
+	threshold: int = None) -> Tuple[ndarray, ndarray]:
 	'''Extracts circle center based on passes from disk kernel.'''
 
 	center = cv.filter2D(src=edges, ddepth=-1, kernel=kernel)
 	center_bw = cv.threshold(center, threshold, 255,
 							    cv.THRESH_BINARY)[1]
-	if show:
-		cv.imshow('filtered', center)
-		cv.imshow('bit filtered', center_bw)
-		cv.waitKey(0)
-		cv.destroyAllWindows()
 	return center, center_bw
 
 def argmax2d(array: ndarray) -> Tuple[int, int]:
@@ -124,34 +108,66 @@ def argmax2d(array: ndarray) -> Tuple[int, int]:
 	return (row, column)
 
 # TODO: I'm not using threshold2 nor center_bw as of now.
-# TODO: Change calls to Optional[ndarray[int, int]]
-# TODO: (y, x) for numpy, (x, y) for cv is a bit confusing.
-def detect_circle(img: ndarray, radius: int, threshold1: int,
-	kernel=ndarray, return_all: bool = False,
-	threshold2: int = None, img_center: Optional[Tuple[int, int]] = None,
-	crop_D: Optional[Tuple[int, int]] = None, show=False) -> Tuple[int, int]:
+# TODO: Change calls to Array-like[int, int]
+# TODO: (y, x) for numpy, (x, y) for cv is a bit confusing. ぜんぶの[::-1]は
+# これのせいです。
+# TODO: Add return type.
+def detect_circle(img: ndarray, radius: int, separation_D: int,
+	n_circles: int, threshold: int, kernel=ndarray,
+	#threshold2: int = None,
+	img_center: optuple = None, crop_D: optuple = None,
+	show=False):
 	'''Returns (x, y) coordinates of circle on img array.'''
-	if crop_D and not img_center:
-		img_center = tuple(((np.array(img.shape) - 1) // 2)[:-1])
-	img_bw, edges = detect_edges(img, center=img_center, crop_D=crop_D,
-								   threshold=threshold1)
-	center_filter = filter_center(edges, kernel)[0]
-	center = argmax2d(center_filter)
+	if bool(crop_D) != bool(img_center):
+		raise ValueError("In order to crop the image both a crop distance "
+						 "and an image center must be provided.")
+	center_modifier = np.array([0, 0])
 	if crop_D:
-		center = np.array(img_center) - np.array(crop_D) + center
-	center = center[::-1]
+		center_modifier = np.array(img_center) - np.array(crop_D)
+
+	img_bw, edges = detect_edges(img, center=img_center,
+								 crop_D=crop_D, threshold=threshold)
+	center_filter = filter_center(edges, kernel)[0]
+	if n_circles == 1:
+		center = (argmax2d(center_filter) + center_modifier)[::-1]
+		img = draw_circle(img, center, radius)
+		centers = [center]
+	else:
+		centers, img = get_centers(img, center_filter, radius, separation_D,
+			        			   n_circles, center_modifier)
+
+	if show:
+		show_circle(img, img_bw, edges, kernel, center_filter)
+	return centers, img, img_bw, edges, center_filter
+
+# TODO: Perhaps change the order of parameters.
+# TODO: This is rather slow. Why? I think it's always slow on
+# micro3 when I analyze the whole image; kernel is too small compared
+# to image dimensions.
+def get_centers(img: ndarray, center_filter: ndarray, radius: int,
+	separation_D: int, n_circles: int, center_modifier: ndarray):
+	centers = []
+	for _ in range(n_circles):
+		center = argmax2d(center_filter)[::-1]
+		center_filter = cv.circle(center_filter, center, radius=separation_D,
+								  color=(0, 0, 0), thickness=-1)
+		center += center_modifier[::-1]
+		centers.append(center)
+	
+	# centers = sortUpperLeftFirst(centers)
+	for i, center in enumerate(centers):
+		img = draw_circle(img, center, radius)
+		# img.labelCircle(i)
+	return centers, img
+
+def draw_circle(img: ndarray, center: int, radius: int):
 	img = cv.circle(img, center, radius=0, color=(0, 0, 255),
 					thickness=3)
 	img = cv.circle(img, center, radius=radius, color=(0, 0, 255),
 					thickness=1)
-	if show:
-		show_circle(img, center, radius, img_bw,
-					edges, kernel, center_filter)
-	if return_all:
-		return center, img, img_bw, edges, center_filter
-	return center, img
+	return img
 
-def show_circle(img, center, radius, img_bw, edges, kernel, center_filter):
+def show_circle(img, img_bw, edges, kernel, center_filter):
 	plt.style.use('dark_background')
 	# Adding circle to image
 	img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
@@ -206,12 +222,14 @@ def main():
 	kernel = build_kernel(radius=radius, padding=padding)
 
 	# Params
+	n_circles = 1
 	threshold = 81
 	img_center = None
 	crop_D = None
 
-	detect_circle(img, radius=radius, kernel=kernel, show=True,
-	     		  threshold1=threshold, img_center=img_center, crop_D=crop_D)
+	detect_circle(img, radius=radius, n_circles=n_circles, separation_D=radius,
+				  kernel=kernel, threshold=threshold,
+				  img_center=img_center, crop_D=crop_D, show=True)
 
 
 #%% 呪い

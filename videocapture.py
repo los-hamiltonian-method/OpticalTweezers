@@ -32,18 +32,17 @@ def get_tracking_parameters(img_filename, json_path):
 	video_dir = data['dir']
 	global radius, padding
 	radius, padding = data['radius'], data['padding']
-	global threshold
-	threshold = data['threshold']
+	global n_circles, threshold
+	n_circles, threshold = data['n_circles'], data['threshold']
 	global img_center, crop_D
 	img_center, crop_D = data['img_center'], data['crop_D']
 	global kernel
 	kernel = build_kernel(radius, padding)
 
-def get_circle(img: ndarray, show: bool = False, return_all: bool = False):
+def get_circle(img: ndarray, show: bool = False):
 	'''Returns circle center and adds circle on image.'''
-	detected = detect_circle(img, radius, threshold, kernel, show=show,
-							 img_center=img_center, crop_D=crop_D,
-							 return_all=return_all)
+	detected = detect_circle(img, radius, radius, n_circles, threshold, kernel,
+		show=show, img_center=img_center, crop_D=crop_D)
 	return detected
 
 def progress(i, N):
