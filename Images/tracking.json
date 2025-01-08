@@ -23,6 +23,26 @@
             "threshold": 65,
             "img_center": null,
             "crop_D": null
+        },
+        "poly2um_brownian.avi" : {
+            "dir": "./Images/07-01-25",
+            "n_circles": 5,
+            "radius": 24,
+            "padding": 1,
+            "threshold": 55,
+            "img_center": null,
+            "crop_D": null
+
+        },
+        "Key Facts.mp4" : {
+            "dir": "./Images/Others",
+            "n_circles": 14,
+            "radius": 7,
+            "padding": 1,
+            "threshold": 85,
+            "img_center": null,
+            "crop_D": null
+
         }
     }
 }

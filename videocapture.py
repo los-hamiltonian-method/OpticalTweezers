@@ -14,14 +14,14 @@ def get_VideoWriter(video_dir: str, video_file: str,
 
 	# VideoWriter
 	video_name, extension = video_file.split('.')
-	video_name += '_tracked.' + extension
+	video_name += '_tracked.mp4'
 	output = cv.VideoWriter(os.path.join(video_dir, video_name),
 		encoder, fps, dimensions)
 	return output
 
 def write_text(img: ndarray, text: str, position: Tuple[int, int]):
 	img = cv.putText(img, text, position, cv.FONT_HERSHEY_TRIPLEX,
-		1, (255, 255, 255), 1, cv.LINE_AA)
+		0.2, (255, 255, 255), 1, cv.LINE_AA)
 	return img
 
 def get_tracking_parameters(img_filename, json_path):
@@ -39,10 +39,10 @@ def get_tracking_parameters(img_filename, json_path):
 	global kernel
 	kernel = build_kernel(radius, padding)
 
-def get_circle(img: ndarray, show: bool = False):
+def get_circle(img: ndarray, last_centers = None, show: bool = False):
 	'''Returns circle center and adds circle on image.'''
 	detected = detect_circle(img, radius, radius, n_circles, threshold, kernel,
-		show=show, img_center=img_center, crop_D=crop_D)
+		show=show, img_center=img_center, crop_D=crop_D, last_centers=last_centers)
 	return detected
 
 def progress(i, N):
@@ -50,7 +50,7 @@ def progress(i, N):
 	print(f"Processed {i} / {N} frames ({percent}%)")
 
 def main():
-	video_file = '2um_laser-browniano_3.mp4'
+	video_file = 'Key Facts.mp4'
 	json_path = './Images/tracking.json'
 	get_tracking_parameters(video_file, json_path)
 
@@ -62,22 +62,21 @@ def main():
 
 	# Text params
 	total_frames = int(videocap.get(7))
-	text_pos, t, i = (30, 50), 0, 0
+	text_pos, t, i = (10, 20), 0, 0
 
 	# Getting videowriter and first frame
 	time_step = 1 / videocap.get(5)
 	output = get_VideoWriter(video_dir, video_file, videocap)
 	frame = write_text(frame, f"{i + 1} - {t:.2f}s", text_pos)
-	frame = get_circle(frame, True)[-1]
+	last_centers, frame = get_circle(frame, None, True)[0:2]
 	output.write(frame)
-
 	while success:
 		progress(i + 1, total_frames)
 		success, frame = videocap.read()
 		if not success:
 			break
 		frame = write_text(frame, f"{i + 1} - {t:.2f}s", text_pos)
-		frame = get_circle(frame)[1]
+		last_centers, frame = get_circle(frame, last_centers)[0:2]
 		output.write(frame)
 		i += 1
 		t += time_step

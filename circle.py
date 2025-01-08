@@ -3,7 +3,8 @@
 import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
+from copy import deepcopy
 
 ndarray = np.ndarray
 optuple = Optional[Tuple[int, int]]
@@ -112,9 +113,10 @@ def argmax2d(array: ndarray) -> Tuple[int, int]:
 # TODO: (y, x) for numpy, (x, y) for cv is a bit confusing. ぜんぶの[::-1]は
 # これのせいです。
 # TODO: Add return type.
+lc_type = Optional[List[ndarray]]
 def detect_circle(img: ndarray, radius: int, separation_D: int,
 	n_circles: int, threshold: int, kernel=ndarray,
-	#threshold2: int = None,
+	threshold2: int = None, last_centers: lc_type = None,
 	img_center: optuple = None, crop_D: optuple = None,
 	show=False):
 	'''Returns (x, y) coordinates of circle on img array.'''
@@ -134,38 +136,58 @@ def detect_circle(img: ndarray, radius: int, separation_D: int,
 		centers = [center]
 	else:
 		centers, img = get_centers(img, center_filter, radius, separation_D,
-			        			   n_circles, center_modifier)
+			        			   n_circles, center_modifier, last_centers)
 
 	if show:
 		show_circle(img, img_bw, edges, kernel, center_filter)
 	return centers, img, img_bw, edges, center_filter
+
+def distance_squared(array1, array2):
+	'''Returnes square of separation distance between array1 and array2.'''
+	x_2 = np.vectorize(lambda x: x**2)
+	return sum(x_2(array1 - array2))
 
 # TODO: Perhaps change the order of parameters.
 # TODO: This is rather slow. Why? I think it's always slow on
 # micro3 when I analyze the whole image; kernel is too small compared
 # to image dimensions.
 def get_centers(img: ndarray, center_filter: ndarray, radius: int,
-	separation_D: int, n_circles: int, center_modifier: ndarray):
+	separation_D: int, n_circles: int, center_modifier: ndarray,
+	last_centers: lc_type = None):
 	centers = []
+	center_filter_holed = deepcopy(center_filter)
 	for _ in range(n_circles):
-		center = argmax2d(center_filter)[::-1]
-		center_filter = cv.circle(center_filter, center, radius=separation_D,
-								  color=(0, 0, 0), thickness=-1)
+		center = argmax2d(center_filter_holed)[::-1]
+		center_filter_holed = cv.circle(center_filter_holed, center,
+			radius=separation_D, color=(0, 0, 0), thickness=-1)
 		center += center_modifier[::-1]
 		img = draw_circle(img, center, radius)
 		centers.append(center)
-	
-	centers = filter(lambda c: c[0]**2 + c[1]**2, centers)
+
+	if not last_centers:
+		key = lambda c: c[0]**2 + c[1]**2
+		centers.sort(key=key)
+	else:
+		# Heuristic for determining circle position continuity
+		# when analyzing videos.
+		ordered_centers = n_circles * [None]
+		last_centers = list(enumerate(last_centers))
+		for center in centers:
+			key = lambda lcenter: distance_squared(center, lcenter[1])
+			last_centers.sort(key=key)
+			ordered_centers[last_centers.pop(0)[0]] = center
+		centers = ordered_centers
 	for i, center in enumerate(centers):
-		position = (np.array(center) + 1.1 * np.array(-radius, radius)).astype(float)
-		img = cv.putText(img, st(i), position, cv.FONT_HERSHEY_TRIPLEX,
-						 1, (255, 255, 255), 1, cv.LINE_AA)
+		#position = (np.array(center) + 1.3 * np.array((radius, -radius))).astype(int)
+		position = (np.array(center)).astype(int)
+		img = cv.putText(img, str(i), position, cv.FONT_HERSHEY_TRIPLEX,
+						 0.25, (255, 255, 255), 1, cv.LINE_AA)
 	return centers, img
 
 def draw_circle(img: ndarray, center: int, radius: int):
 	img = cv.circle(img, center, radius=0, color=(0, 0, 255),
 					thickness=3)
-	img = cv.circle(img, center, radius=radius, color=(0, 0, 255),
+	img = cv.circle(img, center, radius=radius, color=(255, 255, 255),
 					thickness=1)
 	return img
 
