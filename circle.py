@@ -181,7 +181,7 @@ def get_centers(img: ndarray, center_filter: ndarray, radius: int,
 		#position = (np.array(center) + 1.3 * np.array((radius, -radius))).astype(int)
 		position = (np.array(center)).astype(int)
 		img = cv.putText(img, str(i), position, cv.FONT_HERSHEY_TRIPLEX,
-						 0.25, (255, 255, 255), 1, cv.LINE_AA)
+						 0.3, (255, 255, 255), 1, cv.LINE_AA)
 	return centers, img
 
 def draw_circle(img: ndarray, center: int, radius: int):
@@ -205,7 +205,7 @@ def show_circle(img, img_bw, edges, kernel, center_filter):
 	imgs = [img_bw, edges, kernel, center_filter, img]
 
 	# Plots
-	fig, ax = plt.subplot_mosaic(mosaic)
+	fig, ax = plt.subplot_mosaic(mosaic, dpi=300, figsize=(8, 4.5))
 	fig.suptitle('Circle Identification')
 	fig.patch.set_facecolor('#787878')
 	for key, im, title in zip(keys, imgs, titles):
@@ -237,17 +237,17 @@ def main():
 	# pupil: 61, 1, 40
 
 	img_dir = './Circle detection/images/'
-	img_name = 'micro.png'
+	img_name = 'micro2.bmp'
 	img = cv.imread(os.path.join(img_dir, img_name))
 	
 	# Kernel params
-	radius = 42
+	radius = 67
 	padding = 1
 	kernel = build_kernel(radius=radius, padding=padding)
 
 	# Params
 	n_circles = 1
-	threshold = 81
+	threshold = 78
 	img_center = None
 	crop_D = None
 

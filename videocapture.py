@@ -10,18 +10,18 @@ def get_VideoWriter(video_dir: str, video_file: str,
 	# Output parameters
 	dimensions = int(videocap.get(3)), int(videocap.get(4))
 	fps = videocap.get(5)
-	encoder = cv.VideoWriter_fourcc(*'mp4v')
+	encoder = cv.VideoWriter_fourcc(*'MP42')
 
 	# VideoWriter
 	video_name, extension = video_file.split('.')
-	video_name += '_tracked.mp4'
+	video_name += '_tracked.avi'
 	output = cv.VideoWriter(os.path.join(video_dir, video_name),
 		encoder, fps, dimensions)
 	return output
 
 def write_text(img: ndarray, text: str, position: Tuple[int, int]):
 	img = cv.putText(img, text, position, cv.FONT_HERSHEY_TRIPLEX,
-		0.2, (255, 255, 255), 1, cv.LINE_AA)
+		0.5, (255, 255, 255), 1, cv.LINE_AA)
 	return img
 
 def get_tracking_parameters(img_filename, json_path):
@@ -50,6 +50,11 @@ def progress(i, N):
 	print(f"Processed {i} / {N} frames ({percent}%)")
 
 def main():
+	import sys
+	sys.path.insert(0, '../MiniPys/Formatter')
+	import minipy_formatter as MF
+	MF.Format().rcUpdate()
+
 	video_file = 'Key Facts.mp4'
 	json_path = './Images/tracking.json'
 	get_tracking_parameters(video_file, json_path)
