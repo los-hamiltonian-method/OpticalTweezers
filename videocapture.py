@@ -4,6 +4,7 @@ from typing import Tuple
 from numpy import ndarray
 import json
 from circle import *
+from pprint import pprint
 
 def get_VideoWriter(video_dir: str, video_file: str,
 	videocap: cv.VideoCapture) -> cv.VideoWriter:
@@ -38,6 +39,9 @@ def get_tracking_parameters(img_filename, json_path):
 	img_center, crop_D = data['img_center'], data['crop_D']
 	global kernel
 	kernel = build_kernel(radius, padding)
+	global start_frame, end_frame
+	start_frame = data['start_frame']
+	end_frame = data['end_frame']
 
 def get_circle(img: ndarray, last_centers = None, show: bool = False):
 	'''Returns circle center and adds circle on image.'''
@@ -55,40 +59,59 @@ def main():
 	import minipy_formatter as MF
 	MF.Format().rcUpdate()
 
-	video_file = 'Key Facts.mp4'
-	json_path = './Images/tracking.json'
+	video_file = '62-00mA_1.avi'
+	json_path = './Images/20-01-25/tracking.json'
 	get_tracking_parameters(video_file, json_path)
 
 	# Loading video
+	text_pos, t, i = (10, 20), 0, 0
 	videocap = cv.VideoCapture(os.path.join(video_dir, video_file))
-	success, frame = videocap.read()
-	if not success:
-		raise FileNotFoundError(f"'{video_path}' doesn't exist!")
+
+	while i <= start_frame:
+		success, frame = videocap.read()
+		if not success:
+			raise FileNotFoundError(f"'{video_path}' doesn't exist!")
+		i += 1
 
 	# Text params
 	total_frames = int(videocap.get(7))
-	text_pos, t, i = (10, 20), 0, 0
+	# print(end_frame)
+	global end_frame
+	end_frame = min(total_frames, end_frame)
 
 	# Getting videowriter and first frame
+	# TODO: If null start or end, code the expected behaviour.
+	# TODO: Progress bar might still be broken.
+
 	time_step = 1 / videocap.get(5)
 	output = get_VideoWriter(video_dir, video_file, videocap)
-	frame = write_text(frame, f"{i + 1} - {t:.2f}s", text_pos)
 	last_centers, frame = get_circle(frame, None, True)[0:2]
+	frame = write_text(frame, f"{i - 1} - {t:.2f}s", text_pos)
 	output.write(frame)
+	
+	centers = []
 	while success:
-		progress(i + 1, total_frames)
+		centers.append(np.array(last_centers).tolist())
+		progress(i - start_frame, (end_frame + 1) - start_frame)
 		success, frame = videocap.read()
-		if not success:
+		if not success or i > end_frame:
 			break
-		frame = write_text(frame, f"{i + 1} - {t:.2f}s", text_pos)
+		frame = write_text(frame, f"{i} - {t:.2f}s", text_pos)
 		last_centers, frame = get_circle(frame, last_centers)[0:2]
 		output.write(frame)
 		i += 1
 		t += time_step
 
+	with open(json_path, 'r') as f:
+		data = json.load(f)
+	data['main'][video_file]['centers'] = centers
+	with open(json_path, 'w') as f:
+		json.dump(data, f, indent=4)
+
 	# Release
 	output.release()
 	videocap.release()
+	
 
 if __name__ == '__main__':
 	main()

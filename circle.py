@@ -112,6 +112,21 @@ def argmax2d(array: ndarray) -> Tuple[int, int]:
 # TODO: Change calls to Array-like[int, int]
 # TODO: (y, x) for numpy, (x, y) for cv is a bit confusing. ぜんぶの[::-1]は
 # これのせいです。
+{
+    "main": {
+        "62-00mA_1.avi" : {
+            "dir": "./Images/20-01-25",
+            "n_circles": 1,
+            "radius": 10,
+            "padding": 1,
+            "threshold": 110,
+            "img_center": [112, 135],
+            "crop_D": [25, 25],
+            "start_frame": 0,
+            "end_frame": 1558
+        }
+    }
+}
 # TODO: Add return type.
 lc_type = Optional[List[ndarray]]
 def detect_circle(img: ndarray, radius: int, separation_D: int,
@@ -214,8 +229,8 @@ def show_circle(img, img_bw, edges, kernel, center_filter):
 
 	# Show
 	plt.subplots_adjust(hspace=0, wspace=0.35)
-	#figManager = plt.get_current_fig_manager()
-	#figManager.full_screen_toggle()
+	figManager = plt.get_current_fig_manager()
+	figManager.full_screen_toggle()
 	plt.show()
 
 
