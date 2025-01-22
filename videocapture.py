@@ -15,7 +15,7 @@ def get_VideoWriter(video_dir: str, video_file: str,
 
     # VideoWriter
     video_name, extension = video_file.split('.')
-    video_name += '_tracked.avi'
+    video_name += '_tracked.' + extension
     output = cv.VideoWriter(os.path.join(video_dir, video_name),
         encoder, fps, dimensions)
     return output
@@ -61,7 +61,7 @@ def main():
     import minipy_formatter as MF
     MF.Format().rcUpdate()
 
-    video_file = '62-00mA_1.avi'
+    video_file = '63-00mA_1.avi'
     json_path = './Images/20-01-25/tracking.json'
     get_tracking_parameters(video_file, json_path)
 
@@ -77,7 +77,6 @@ def main():
 
     # Text params
     total_frames = int(videocap.get(7))
-    # print(end_frame)
     global end_frame
     end_frame = min(total_frames, end_frame)
 
@@ -87,12 +86,12 @@ def main():
 
     time_step = 1 / videocap.get(5)
     output = get_VideoWriter(video_dir, video_file, videocap)
-    last_centers, frame = get_circle(frame, None, True)[0:2]
+    last_centers, frame = get_circle(frame, None, False)[0:2]
     frame = write_text(frame, f"{i - 1} - {t:.2f}s", text_pos)
     output.write(frame)
     
-    centers = []
     
+    centers = []
     while success:
         centers.append(np.array(last_centers).tolist())
         progress(i - start_frame, (end_frame + 1) - start_frame)
@@ -104,13 +103,14 @@ def main():
         output.write(frame)
         i += 1
         t += time_step
-
+    
     with open(json_path, 'r') as f:
         data = json.load(f)
-    data['main'][video_file]['centers'] = centers
+    data['main'][video_file]['time_step'] = time_step
+    data['main'][video_file]['centers'] = centers # []
     with open(json_path, 'w') as f:
         json.dump(data, f, indent=4)
-
+    
     # Release
     output.release()
     videocap.release()

@@ -103,13 +103,13 @@ def filter_center(edges: ndarray, kernel: ndarray,
                                 cv.THRESH_BINARY)[1]
     return center, center_bw
 
-def argmax2d(array: np.ndarray) -> Tuple[int, int]:
+def argmax2d(array: np.ndarray) -> Tuple[int, int]: #(x, y)
     '''Returns (y, x) positions of maximum value in array.'''
     arg = array.argmax()
     x_shape = array.shape[1]
     row = int(arg // x_shape)
     column = int(arg - row * x_shape)
-    return row, column
+    return column, row
 
 # TODO: I'm not using threshold2 nor center_bw as of now.
 # TODO: Change calls to Array-like[int, int]
@@ -130,17 +130,17 @@ def detect_circle(img: ndarray, radius: int, separation_D: int,
     center_modifier = np.array([0, 0])
     if crop_D:
         center_modifier = np.array(img_center) - np.array(crop_D)
+        # TODO: (y, x)!!!!!!!!!!!!!!!!
 
     img_cropped, img_bw, edges = detect_edges(img, center=img_center,
                                            crop_D=crop_D, threshold=threshold)
     center_filter = filter_center(edges, kernel)[0]
     if n_circles == 1:
-        center = argmax2d(center_filter)
-        if refine:
-            center = refine_center(img_cropped, center, radius)
-        center += center_modifier
-        centers = [center[::-1]]
-        img = draw_circle(img, center, radius)
+        center = argmax2d(center_filter) # TODO: (x, y)!!!!!!!!!!!
+        if refine: center = refine_center(img_cropped, center, radius)
+        center = (center + center_modifier[::-1])
+        centers = [center]
+        img = draw_circle(img, center.astype(int), radius)
     else:
         centers, img = get_centers(img, center_filter, radius, separation_D,
                         n_circles, center_modifier, last_centers, refine)
@@ -166,8 +166,10 @@ def refine_center(img: ndarray, center: Tuple[float, float],
     weighted_x = 1
     weighted_y = 1
     sum_intensity = 0
-    i = -1
+    i = 0
+    #plt.imshow(img)
     while abs(weighted_x) > 0.5 or abs(weighted_y) > 0.5:
+        #plt.scatter(*center, s=2, color='blue')
         if i > 100:
             break
         for y, row in enumerate(img):
@@ -181,16 +183,16 @@ def refine_center(img: ndarray, center: Tuple[float, float],
                 weighted_y += dy * intensity
         weighted_x /= sum_intensity
         weighted_y /= sum_intensity
+        if i > 0: print(i)
         i += 1
         center = center[0] + weighted_x, center[1] + weighted_x
-    return center
     
-    #plt.imshow(img_cropped)
     #x = np.linspace(center[0] - w_distance, center[0] + w_distance, 1000)
     #circle_plot = lambda x: np.sqrt(w_distance**2 - (x - center[0])**2)
     #plt.plot(x, circle_plot(x) + center[1], color='red')
     #plt.plot(x, -circle_plot(x) + center[1], color='red')
     #plt.scatter(*center, color='red', s=5)
+    return center
 
 # TODO: Perhaps change the order of parameters.
 # TODO: This is rather slow. Why? I think it's always slow on
@@ -235,7 +237,7 @@ def get_centers(img: ndarray, center_filter: ndarray, radius: int,
                          0.3, (255, 255, 255), 1, cv.LINE_AA)
     return refined_centers, img
 
-def draw_circle(img: ndarray, center: int, radius: int):
+def draw_circle(img: ndarray, center: Tuple[int, int], radius: int):
     img = cv.circle(img, center, radius=0, color=(0, 0, 255),
                     thickness=3)
     img = cv.circle(img, center, radius=radius, color=(255, 255, 255),
