@@ -20,6 +20,12 @@ def get_VideoWriter(video_dir: str, video_file: str,
         encoder, fps, dimensions)
     return output
 
+def save_img(video_dir: str, video_file: str, img: ndarray) -> None:
+    video_name, _ = video_file.split('.')
+    video_name += '_frame.png'
+    video_path = os.path.join(video_dir, video_name)
+    cv.imwrite(video_path, img)
+
 def write_text(img: ndarray, text: str, position: Tuple[int, int]):
     img = cv.putText(img, text, position, cv.FONT_HERSHEY_TRIPLEX,
         0.5, (255, 255, 255), 1, cv.LINE_AA)
@@ -61,7 +67,11 @@ def main():
     import minipy_formatter as MF
     MF.Format().rcUpdate()
 
-    video_file = '63-00mA_1.avi'
+    #files = ["62-00mA_1.avi", "63-00mA_2.avi", "63-50mA_1.avi", "63-50mA_2.avi", 
+    #         "63-75mA_1.avi", "64-00mA_1.avi", "64-00mA_2.avi", "64-00mA_3.avi",
+    #         "64-50mA_1.avi", "65-00mA_1.avi", "65-50mA_1.avi", "66-00mA_1.avi"]
+    #for video_file in files:
+    video_file = '66-00mA_1.avi'
     json_path = './Images/20-01-25/tracking.json'
     get_tracking_parameters(video_file, json_path)
 
@@ -86,20 +96,23 @@ def main():
 
     time_step = 1 / videocap.get(5)
     output = get_VideoWriter(video_dir, video_file, videocap)
-    last_centers, frame = get_circle(frame, None, False)[0:2]
+    last_centers, frame = get_circle(frame, None)[0:2]
     frame = write_text(frame, f"{i - 1} - {t:.2f}s", text_pos)
+    #save_img(video_dir, video_file, frame)
     output.write(frame)
     
     
     centers = []
-    while success:
+    while True:
         centers.append(np.array(last_centers).tolist())
         progress(i - start_frame, (end_frame + 1) - start_frame)
         success, frame = videocap.read()
         if not success or i > end_frame:
             break
         frame = write_text(frame, f"{i} - {t:.2f}s", text_pos)
-        last_centers, frame = get_circle(frame, last_centers)[0:2]
+        if i % 300 == 0: show = True
+        else: show = False
+        last_centers, frame = get_circle(frame, last_centers, show)[0:2]
         output.write(frame)
         i += 1
         t += time_step

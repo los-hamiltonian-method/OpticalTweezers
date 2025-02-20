@@ -8,4 +8,5 @@ recent_files = ['..\\..\\..\\..\\.spyder-py3\\temp.py', 'videocapture.py', 'circ
 
 [main]
 version = 0.2.0
+recent_files = []
 

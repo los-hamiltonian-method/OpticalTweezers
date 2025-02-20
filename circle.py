@@ -170,8 +170,11 @@ def refine_center(img: ndarray, center: Tuple[float, float],
     #plt.imshow(img)
     while abs(weighted_x) > 0.5 or abs(weighted_y) > 0.5:
         #plt.scatter(*center, s=2, color='blue')
-        if i > 100:
+        recursion_limit = 10
+        if i > recursion_limit:
             break
+            print("Warning: In refining center the recursion limit"
+                  f"{recursion_limit} was exceeded.")
         for y, row in enumerate(img):
             for x, intensity in enumerate(row):
                 dx = x - center[0]
