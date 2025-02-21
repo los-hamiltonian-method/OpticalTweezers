@@ -110,7 +110,7 @@ def main():
         if not success or i > end_frame:
             break
         frame = write_text(frame, f"{i} - {t:.2f}s", text_pos)
-        if i % 300 == 0: show = True
+        if i % 300 == 0.1: show = True
         else: show = False
         last_centers, frame = get_circle(frame, last_centers, show)[0:2]
         output.write(frame)

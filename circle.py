@@ -137,7 +137,7 @@ def detect_circle(img: ndarray, radius: int, separation_D: int,
     center_filter = filter_center(edges, kernel)[0]
     if n_circles == 1:
         center = argmax2d(center_filter) # TODO: (x, y)!!!!!!!!!!!
-        if refine: center = refine_center(img_cropped, center, radius)
+        if refine: center = refine_center(img_cropped, center, 3 * radius)
         center = (center + center_modifier[::-1])
         centers = [center]
         img = draw_circle(img, center.astype(int), radius)
@@ -168,13 +168,13 @@ def refine_center(img: ndarray, center: Tuple[float, float],
     sum_intensity = 0
     i = 0
     #plt.imshow(img)
-    while abs(weighted_x) > 0.5 or abs(weighted_y) > 0.5:
+    while abs(weighted_x) > 0.1 or abs(weighted_y) > 0.1:
         #plt.scatter(*center, s=2, color='blue')
-        recursion_limit = 10
+        recursion_limit = 100
         if i > recursion_limit:
+            print("Warning: In refining center the recursion limit "
+                  f"({recursion_limit}) was exceeded.")
             break
-            print("Warning: In refining center the recursion limit"
-                  f"{recursion_limit} was exceeded.")
         for y, row in enumerate(img):
             for x, intensity in enumerate(row):
                 dx = x - center[0]
@@ -186,9 +186,9 @@ def refine_center(img: ndarray, center: Tuple[float, float],
                 weighted_y += dy * intensity
         weighted_x /= sum_intensity
         weighted_y /= sum_intensity
-        if i > 0: print(i)
         i += 1
         center = center[0] + weighted_x, center[1] + weighted_x
+    if i > 0: print(f"Refined center {i + 1} times.")
     
     #x = np.linspace(center[0] - w_distance, center[0] + w_distance, 1000)
     #circle_plot = lambda x: np.sqrt(w_distance**2 - (x - center[0])**2)

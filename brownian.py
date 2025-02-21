@@ -14,8 +14,8 @@ def get_positions(video_data):
 	global times, time_step, x_centers, y_centers
 	time_step = video_data['time_step']
 	times = np.array([i * time_step for i in range(0, num_centers)])
-	x_centers = centers[:, 0]
-	y_centers = centers[:, 1]
+	x_centers = centers[:, 0].astype('float64')
+	y_centers = centers[:, 1].astype('float64')
 
 	# Shifting
 	x_centers -= x_centers.mean()
@@ -47,6 +47,7 @@ def get_variance(distribution: ndarray, values: ndarray, mean: float = 0):
 		variance += p * x**2
 	return variance - mean**2
 
+# TODO: Save figs.
 def show_histogram():
 	# Ranges
 	binwidth = 0.2
