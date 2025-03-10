@@ -121,9 +121,10 @@ lc_type = Optional[List[ndarray]]
 def detect_circle(img: ndarray, radius: int, separation_D: int,
     n_circles: int, threshold: int, kernel=ndarray,
     threshold2: int = None, last_centers: lc_type = None,
-    img_center: optuple = None, crop_D: optuple = None, refine=False,
-    show=False):
+    img_center: optuple = None, crop_D: optuple = None,
+    refine=False, w_distance: float = None, show=False):
     '''Returns (x, y) coordinates of circle on img array.'''
+    if not w_distance: w_distance = radius
     if bool(crop_D) != bool(img_center):
         raise ValueError("In order to crop the image both a crop distance "
                          "and an image center must be provided.")
@@ -137,10 +138,11 @@ def detect_circle(img: ndarray, radius: int, separation_D: int,
     center_filter = filter_center(edges, kernel)[0]
     if n_circles == 1:
         center = argmax2d(center_filter) # TODO: (x, y)!!!!!!!!!!!
-        if refine: center = refine_center(img_cropped, center, 3 * radius)
+        if refine: center = refine_center(img_cropped, center, w_distance)
         center = (center + center_modifier[::-1])
         centers = [center]
         img = draw_circle(img, center.astype(int), radius)
+        img = draw_circle(img, center.astype(int), w_distance)
     else:
         centers, img = get_centers(img, center_filter, radius, separation_D,
                         n_circles, center_modifier, last_centers, refine)

@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import json
-import sys
+import json, sys, os
 from pprint import pprint
 from scipy import optimize
 from scipy.stats import norm
@@ -48,38 +47,74 @@ def get_variance(distribution: ndarray, values: ndarray, mean: float = 0):
 	return variance - mean**2
 
 # TODO: Save figs.
-def show_histogram():
+def get_position_distribution(show=False):
 	# Ranges
-	binwidth = 0.2
+	binwidth = 0.4
 	X = np.linspace(min(x_centers), max(x_centers), 3000)
-	X = np.linspace(min(y_centers), max(y_centers), 3000)
+	Y = np.linspace(min(y_centers), max(y_centers), 3000)
 	x_binrange = np.arange(min(x_centers), max(x_centers) + binwidth, binwidth)
 	y_binrange = np.arange(min(y_centers), max(y_centers) + binwidth, binwidth)
 	
 	# Plots
 	fig, axs = plt.subplot_mosaic([['x'], ['y']], dpi=200)
-	hist_x = axs['x'].hist(x_centers, bins=y_binrange, density=True, alpha=0.4)
-	hist_y = axs['y'].hist(y_centers, bins=y_binrange, density=True,
+	global hist_x, hist_y
+	hist_x = axs['x'].hist(x_centers, bins=y_binrange, density=False, alpha=0.4)
+	hist_y = axs['y'].hist(y_centers, bins=y_binrange, density=False,
 		                   color='red', alpha=0.4)
 
 	# Gaussian fits
-	x_variance = get_variance(hist_x[0], hist_x[1])
-	y_variance = get_variance(hist_y[0], hist_y[1])
-	axs['x'].plot(X, norm.pdf(X, 0, np.sqrt(x_variance)), color='blue',
-		          label=f"$\sigma$ = {x_variance:.2f}")
-	axs['y'].plot(X, norm.pdf(X, 0, np.sqrt(y_variance)), color='red',
-				  label=f"$\sigma$ = {y_variance:.2f}")
+	x_std = np.std(x_centers)
+	y_std = np.std(y_centers)
+	axs['x'].plot(X, norm.pdf(X, 0, x_std), color='blue',
+		          label=f"$\sigma$ = {x_std:.2f}")
+	axs['y'].plot(Y, norm.pdf(Y, 0, y_std), color='red',
+				  label=f"$\sigma$ = {y_std:.2f}")
 
 	# Format
 	fig.suptitle(f"Position distribution for {video_name}")
-	for label, variance in zip(axs, (x_variance, y_variance)):
-	    axs[label].set(xlabel=f'Position (px)',
+	for label, std in zip(axs, (x_std, y_std)):
+	    axs[label].set(xlabel=f'Position [px]',
 	                   ylabel=f'Counts')
 	    axs[label].legend(loc='upper right')
-	plt.show()
+	plt.savefig(os.path.join(dir_path, f"position_{video_name.replace('.avi', '.png')}"))
+	if show: plt.show()
 
 	return fig, axs
 
+def get_potential(show=False):
+	x = -np.log(hist_x[0])
+	y = -np.log(hist_y[0])
+	x = x - min(x)
+	y = y - min(y)
+	bin_x = (hist_x[1][:-1] + hist_x[1][1:]) / 2
+	bin_y = (hist_y[1][:-1] + hist_y[1][1:]) / 2
+	bin_x, bin_y = bin_x[x < np.inf], bin_y[y < np.inf]
+	x, y = x[x < np.inf], y[y < np.inf]
+	fig, axs = plt.subplot_mosaic([['x'], ['y']], dpi=200)
+	axs['x'].scatter(bin_x, x, color='blue', s=3)
+	axs['y'].scatter(bin_y, y, color='red', s=3)
+
+	# Fit
+	f = lambda r, a: a * r**2
+	X = np.linspace(min(x_centers), max(x_centers), 3000)
+	Y = np.linspace(min(y_centers), max(y_centers), 3000)
+	opt_x, cov_x = optimize.curve_fit(f, bin_x, x)
+	opt_y, cov_y = optimize.curve_fit(f, bin_y, y)
+	axs['x'].plot(X, f(X, opt_x[0]), color='blue',
+		label=f"Fit: $a x^2$\n$a={float(opt_x[0]):.2f}\\pm{float(cov_x[0]):.4f}$")
+	axs['y'].plot(Y, f(Y, opt_y[0]), color='red',
+		label=f"Fit: $a x^2$\n$a={float(opt_y[0]):.2f}\\pm{float(cov_y[0]):.4f}$")
+
+	# Format
+	fig.suptitle(f"Potenatials for {video_name}")
+	for label in axs:
+	    axs[label].set(xlabel=f'Position [px]',
+	                   ylabel=f'Potential [kT]')
+	    axs[label].legend(loc='upper right')
+	plt.savefig(os.path.join(dir_path, f"potential_{video_name.replace('.avi', '.png')}"))
+	if show: plt.show()
+
+	return fig, axs
 
 def main():
 	formatter_path = r"..\MiniPys\Formatter"
@@ -88,8 +123,12 @@ def main():
 	plt.style.use('default')
 	MF.Format().rcUpdate()
 
-	skip = {'63-00mA_1.avi', '63-50mA_3.avi', '63-75mA_2.avi', '64-50mA_2.avi', '65-00mA_2.avi','65-00mA_3.avi','65-50mA_2.avi','66-00mA_2.avi','66-00mA_3.avi'}
-	json_path = './Images/20-01-25/tracking.json'
+	skip = {'63-00mA_1.avi', '63-50mA_3.avi', '63-75mA_2.avi',
+			'64-50mA_2.avi', '65-00mA_2.avi','65-00mA_3.avi',
+			'65-50mA_2.avi','66-00mA_2.avi','66-00mA_3.avi'}
+	global dir_path	
+	dir_path = './Images/20-01-25/'
+	json_path = os.path.join(dir_path, 'tracking.json')
 	with open(json_path, 'r') as f:
 	    data = json.load(f)['main']
 
@@ -98,7 +137,8 @@ def main():
 		if video_name in skip: continue
 		get_positions(data[video_name])
 		# show_positions()
-		show_histogram()
+		get_position_distribution()
+		get_potential()
 
 
 

@@ -53,25 +53,14 @@ def get_circle(img: ndarray, last_centers = None, show: bool = False):
     '''Returns circle center and adds circle on image.'''
     detected = detect_circle(img, radius, radius, n_circles, threshold, kernel,
         show=show, img_center=img_center, crop_D=crop_D,
-        last_centers=last_centers, refine=True)
+        last_centers=last_centers, refine=True, w_distance=3 * radius)
     return detected
 
 def progress(i, N):
     percent = round(100 * i / N, 2)
     print(f"Processed {i} / {N} frames ({percent}%)")
 
-def main():
-    import sys
-    formatter_path = r"..\MiniPys\Formatter"
-    sys.path.insert(0, formatter_path)
-    import minipy_formatter as MF
-    MF.Format().rcUpdate()
-
-    #files = ["62-00mA_1.avi", "63-00mA_2.avi", "63-50mA_1.avi", "63-50mA_2.avi", 
-    #         "63-75mA_1.avi", "64-00mA_1.avi", "64-00mA_2.avi", "64-00mA_3.avi",
-    #         "64-50mA_1.avi", "65-00mA_1.avi", "65-50mA_1.avi", "66-00mA_1.avi"]
-    #for video_file in files:
-    video_file = '66-00mA_1.avi'
+def main_loop(video_file):
     json_path = './Images/20-01-25/tracking.json'
     get_tracking_parameters(video_file, json_path)
 
@@ -96,11 +85,10 @@ def main():
 
     time_step = 1 / videocap.get(5)
     output = get_VideoWriter(video_dir, video_file, videocap)
-    last_centers, frame = get_circle(frame, None)[0:2]
+    last_centers, frame = get_circle(frame, None, show=True)[0:2]
     frame = write_text(frame, f"{i - 1} - {t:.2f}s", text_pos)
     #save_img(video_dir, video_file, frame)
     output.write(frame)
-    
     
     centers = []
     while True:
@@ -127,7 +115,23 @@ def main():
     # Release
     output.release()
     videocap.release()
-    
+
+def main():
+    import sys
+    formatter_path = r"..\MiniPys\Formatter"
+    sys.path.insert(0, formatter_path)
+    import minipy_formatter as MF
+    MF.Format().rcUpdate()
+
+    skip = {'63-00mA_1.avi', '63-50mA_3.avi', '63-75mA_2.avi',
+            '64-50mA_2.avi', '65-00mA_2.avi','65-00mA_3.avi',
+            '65-50mA_2.avi','66-00mA_2.avi','66-00mA_3.avi'}
+    json_path = './Images/20-01-25/tracking.json'
+    with open(json_path, 'r') as f:
+        data = json.load(f)['main']
+    for video_file in data.keys():
+        if video_file in skip: continue
+        main_loop(video_file)
     
 
 if __name__ == '__main__':
