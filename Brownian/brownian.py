@@ -7,6 +7,12 @@ from scipy.stats import norm
 import pandas as pd
 from uncertainties import ufloat
 
+def calculate_binwidth(centers):
+	n = len(centers)
+	iqr = np.percentile(centers, 75) - np.percentile(centers, 25)
+	h = 2 * iqr * n**(-1 / 3)
+	return (np.max(centers) - np.min(centers)) / h
+
 
 def get_positions(video_data):
 	centers = np.array(video_data['centers'])[:,0,:]
@@ -23,15 +29,15 @@ def get_positions(video_data):
 	y_centers -= y_centers.mean()
 
 def save_positions(show=False):
-	fig, axs = plt.subplot_mosaic([['x'], ['y']], dpi=200)
+	fig, axs = plt.subplot_mosaic([['x'], ['y']], dpi=200, figsize=(20, 10))
 	labels = ['x', 'y']
 	axs['x'].plot(times, x_centers, linewidth=0.5)
 	axs['y'].plot(times, y_centers, color='red', linewidth=0.5)
 
 	fig.suptitle(f"Brownian motion for {video_name}")
 	for c, label in zip((x_centers, y_centers), axs):
-	    axs[label].set(xlabel=f'Time (t), step={round(time_step, 4)}',
-	                   ylabel=f'${label}$-displacement (nm)')
+	    axs[label].set(xlabel=f'Time [s], step={round(time_step, 4)} s',
+	                   ylabel=f'${label}$-displacement [nm]')
 	    axs[label].axhline(0, color='#888', linestyle='--', linewidth=1)
 	    axs[label].axhline(np.max(c), color='#888',
 	    	               linestyle='--', linewidth=1)
@@ -40,6 +46,7 @@ def save_positions(show=False):
 
 	figpath = os.path.join(dir_path, 'Brownian analysis/Figures',
 				f"position_{video_name.replace('.avi', '.png')}")
+	plt.subplots_adjust(hspace=0.3)
 	plt.savefig(figpath)
 	if show: plt.show()
 
@@ -54,17 +61,18 @@ def get_variance(distribution: ndarray, values: ndarray, mean: float = 0):
 # TODO: Save figs.
 def get_position_distribution(show=False):
 	# Ranges
-	binwidth = 4
+	x_binwidth = calculate_binwidth(x_centers)
+	y_binwidth = calculate_binwidth(y_centers)
 	X = np.linspace(min(x_centers), max(x_centers), 3000)
 	Y = np.linspace(min(y_centers), max(y_centers), 3000)
-	x_binrange = np.arange(min(x_centers), max(x_centers) + binwidth, binwidth)
-	y_binrange = np.arange(min(y_centers), max(y_centers) + binwidth, binwidth)
+	x_binrange = np.arange(min(x_centers), max(x_centers) + x_binwidth, x_binwidth)
+	y_binrange = np.arange(min(y_centers), max(y_centers) + y_binwidth, y_binwidth)
 	
 	# Plots
-	fig, axs = plt.subplot_mosaic([['x'], ['y']], dpi=200)
+	fig, axs = plt.subplot_mosaic([['x'], ['y']], dpi=200, figsize=(20, 10))
 	global hist_x, hist_y
-	hist_x = axs['x'].hist(x_centers, bins=y_binrange, density=False, alpha=0.4)
-	hist_y = axs['y'].hist(y_centers, bins=y_binrange, density=False,
+	hist_x = axs['x'].hist(x_centers, bins=y_binrange, density=True, alpha=0.4)
+	hist_y = axs['y'].hist(y_centers, bins=y_binrange, density=True,
 		                   color='red', alpha=0.4)
 
 	# Gaussian fits
@@ -84,6 +92,7 @@ def get_position_distribution(show=False):
 
 	figpath = os.path.join(dir_path, 'Brownian analysis/Figures',
 				f"distribution_{video_name.replace('.avi', '.png')}")
+	plt.subplots_adjust(hspace=0.3)
 	plt.savefig(figpath)
 	if show: plt.show()
 
@@ -98,7 +107,7 @@ def get_potential(show=False):
 	bin_y = (hist_y[1][:-1] + hist_y[1][1:]) / 2
 	bin_x, bin_y = bin_x[x < np.inf], bin_y[y < np.inf]
 	x, y = x[x < np.inf], y[y < np.inf]
-	fig, axs = plt.subplot_mosaic([['x'], ['y']], dpi=200)
+	fig, axs = plt.subplot_mosaic([['x'], ['y']], dpi=200, figsize=(20, 10))
 	axs['x'].scatter(bin_x, x, color='blue', s=3)
 	axs['y'].scatter(bin_y, y, color='red', s=3)
 
@@ -121,6 +130,7 @@ def get_potential(show=False):
 	    axs[label].legend(loc='upper right')
 	figpath = os.path.join(dir_path, 'Brownian analysis/Figures',
 		f"potential_{video_name.replace('.avi', '.png')}")
+	plt.subplots_adjust(hspace=0.3)
 	plt.savefig(figpath)
 	if show: plt.show()
 

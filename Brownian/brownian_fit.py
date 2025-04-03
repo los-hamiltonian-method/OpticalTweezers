@@ -26,10 +26,10 @@ def main():
 	
 	fig, axs = plt.subplot_mosaic([['kx'], ['ky']], dpi=200, figsize=(20, 10))
 	axs['kx'].scatter(current, kx)
-	axs['ky'].scatter(current, ky)
+	axs['ky'].scatter(current, ky, color='red')
 
 	fig.suptitle('Brownian Fits')
-	xlabels = ["$k_x$ [kg / s$^2$]", "$k_y$ [kg / s$^2$]"]
+	xlabels = ["$k_x$ [k$_B$T / nm$^2$]", "$k_y$ [k$_B$T / nm$^2$]"]
 	for ax, label in zip(axs, xlabels):
 		axs[ax].set(title=label, xlabel='Current [mA]', ylabel=label)
 		axs[ax].grid(True, ls='--')

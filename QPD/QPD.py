@@ -33,7 +33,7 @@ def mainloop(dsname, reference_name, current, reference, pds_avg):
 	# Plots
 	mosaic = [['time', 'freq']]
 	fig, axs = plt.subplot_mosaic(mosaic, figsize=(15, 10))
-	suptitle = f"Current: {current}mA\n File: {dsname}"
+	suptitle = f"Current: {current}mA\n File: {dsname} (cut)"
 	if reference: suptitle = 'Reference - ' + suptitle
 	fig.suptitle(suptitle)
 	

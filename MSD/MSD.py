@@ -58,8 +58,8 @@ def plot_MSD(show=False):
 	# Plots
 	axs['xpos'].scatter(time, xmsd, label='MSD$_x$ data', s=5)
 	axs['xpos'].plot(time, analytic_MSD(time, *xpopt), label='MSD$_x$ fit') 
-	axs['ypos'].scatter(time, ymsd, label='MSD$_y$ data', s=5)
-	axs['ypos'].plot(time, analytic_MSD(time, *ypopt), label='MSD$_y$ fit')
+	axs['ypos'].scatter(time, ymsd, label='MSD$_y$ data', s=5, color='red')
+	axs['ypos'].plot(time, analytic_MSD(time, *ypopt), label='MSD$_y$ fit', color='red')
 
 	# v/hlines
 	axs['xpos'].axvline(xpopt[0], color='#ccc', ls='-.', label='$\\tau_{0,x}$')
@@ -70,15 +70,17 @@ def plot_MSD(show=False):
 	# Format
 	for ax in axs: axs[ax].legend()
 	fig.suptitle(video_name)
-	axs['xpos'].set(title="MSD$_x$", ylabel="MSD$_x$($\\tau$) [nm$^2$]",
+	xtitle = r"MSD$_x = \frac{2 k_B T}{k_x} [1 - \exp{(-|\tau| / \tau_{0, x})}]$"
+	ytitle = r"MSD$_y = \frac{2 k_B T}{k_y} [1 - \exp{(-|\tau| / \tau_{0, y})}]$"
+	axs['xpos'].set(title=xtitle, ylabel="MSD$_x$($\\tau$) [nm$^2$]",
 					xlabel="$\\tau$ [s]")
-	axs['ypos'].set(title="MSD$_y$", ylabel="MSD$_y$($\\tau$) [nm$^2$]",
+	axs['ypos'].set(title=ytitle, ylabel="MSD$_y$($\\tau$) [nm$^2$]",
 		            xlabel="$\\tau$ [s]")
 	plt.subplots_adjust(hspace=0.5)
 
 	# I/O
 	figpath = os.path.join(dir_path, 'MSD analysis', 'Figures',
-						   'MSD_' + video_name.replace('.avi', '.png'))
+						   f"MSD_{str(cutoff_time).replace('.', '-')}s_{video_name.replace('.avi', '.png')}")
 	plt.savefig(figpath)
 	save_popt(xpopt, ypopt)
 

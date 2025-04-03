@@ -29,16 +29,16 @@ def main():
 								  dpi=200, figsize=(20, 10))
 	axs['tau0x'].scatter(current, 1 / tau0x)
 	axs['Ax'].scatter(current, 1 / Ax)
-	axs['tau0y'].scatter(current, 1 / tau0y)
-	axs['Ay'].scatter(current, 1 / Ay)
+	axs['tau0y'].scatter(current, 1 / tau0y, color='red')
+	axs['Ay'].scatter(current, 1 / Ay, color='red')
 
 	axs['kTx'].scatter(current, Ax / tau0x, label='From $x$-data')
-	axs['kTy'].scatter(current, Ay / tau0y, label='From $y$-data')
+	axs['kTy'].scatter(current, Ay / tau0y, label='From $y$-data', color='red')
 
 	fig.suptitle('MSD Fits')
 	xlabels = ["$k_x / \\gamma$ [s$^{-1}$]", "$k_y / \\gamma$ [s$^{-1}$]",
 			   "$k_x / 2 k_B T$ [nm$^{-2}$]", "$k_y / 2 k_B T$ [nm$^{-2}$]",
-			   "$2 k_B T / \\gamma$ ($x$-data)", "$2 k_B T / \\gamma$ ($y$-data)"]
+			   "$2 k_B T / \\gamma$ [nm$^2$s$^{-1}$] ($x$-data)", "$2 k_B T / \\gamma$ [nm$^2$s$^{-1}$] ($y$-data)"]
 	for ax, label in zip(axs, xlabels):
 		axs[ax].set(title=label, xlabel='Current [mA]', ylabel=label)
 		axs[ax].grid(True, ls='--')
