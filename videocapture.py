@@ -1,11 +1,14 @@
+# %% Imports
 import cv2 as cv
 import os
 from typing import Tuple
 from numpy import ndarray
 import json
-from circle import *
-from pprint import pprint
+import circle
+import numpy as np
+# from pprint import pprint
 
+#%% Functions
 def get_VideoWriter(video_dir: str, video_file: str,
     videocap: cv.VideoCapture) -> cv.VideoWriter:
     # Output parameters
@@ -44,16 +47,18 @@ def get_tracking_parameters(img_filename, json_path):
     global img_center, crop_D
     img_center, crop_D = data['img_center'], data['crop_D']
     global kernel
-    kernel = build_kernel(radius, padding)
+    kernel = circle.build_kernel(radius, padding)
     global start_frame, end_frame
     start_frame = data['start_frame']
     end_frame = data['end_frame']
 
 def get_circle(img: ndarray, last_centers = None, show: bool = False):
     '''Returns circle center and adds circle on image.'''
-    detected = detect_circle(img, radius, radius, n_circles, threshold, kernel,
-        show=show, img_center=img_center, crop_D=crop_D,
-        last_centers=last_centers, refine=True, w_distance=3 * radius)
+    detected = circle.detect_circle(img, radius, radius, n_circles,
+                                    threshold, kernel, show=show,
+                                    img_center=img_center, crop_D=crop_D,
+                                    last_centers=last_centers, refine=True,
+                                    refine_distance=3 * radius)
     return detected
 
 def progress(i, N):
@@ -61,12 +66,13 @@ def progress(i, N):
     print(f"Processed {i} / {N} frames ({percent}%)")
 
 def main_loop(video_file):
-    json_path = './Images/20-01-25/tracking.json'
+    json_path = './Videos/20-01-25/tracking.json'
     get_tracking_parameters(video_file, json_path)
+    video_path = os.path.join(video_dir, video_file)
 
     # Loading video
     text_pos, t, i = (10, 20), 0, 0
-    videocap = cv.VideoCapture(os.path.join(video_dir, video_file))
+    videocap = cv.VideoCapture(video_path)
 
     while i <= start_frame:
         success, frame = videocap.read()
@@ -126,7 +132,7 @@ def main():
     skip = {'63-00mA_1.avi', '63-50mA_3.avi', '63-75mA_2.avi',
             '64-50mA_2.avi', '65-00mA_2.avi','65-00mA_3.avi',
             '65-50mA_2.avi','66-00mA_2.avi','66-00mA_3.avi'}
-    json_path = './Images/20-01-25/tracking.json'
+    json_path = './Videos/20-01-25/tracking.json'
     with open(json_path, 'r') as f:
         data = json.load(f)['main']
     for video_file in data.keys():

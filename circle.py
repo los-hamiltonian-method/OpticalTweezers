@@ -74,9 +74,9 @@ def detect_edges(img: ndarray, threshold: int, center: optuple = None,
     x_deriv = cv.filter2D(src=img_bw, ddepth=-1, kernel=x_kernel)
     inv_y_deriv = cv.filter2D(src=img_bw, ddepth=-1, kernel=-y_kernel)
     inv_x_deriv = cv.filter2D(src=img_bw, ddepth=-1, kernel=-x_kernel)
-    edges = np.sqrt(x_deriv**2 + y_deriv**2
+    gradient = np.sqrt(x_deriv**2 + y_deriv**2
                     + inv_y_deriv**2 + inv_x_deriv**2).astype(float)
-    edges = 255 * edges / np.max(edges)
+    edges = 255 * gradient / np.max(gradient)
     return img, img_bw, edges
 
 def build_kernel(radius: int = 100, padding: int = 5) -> ndarray:
@@ -100,7 +100,7 @@ def filter_center(edges: ndarray, kernel: ndarray,
 
     center = cv.filter2D(src=edges, ddepth=-1, kernel=kernel)
     center_bw = cv.threshold(center, threshold, 255,
-                                cv.THRESH_BINARY)[1]
+                             cv.THRESH_BINARY)[1]
     return center, center_bw
 
 def argmax2d(array: np.ndarray) -> Tuple[int, int]: #(x, y)
@@ -116,15 +116,42 @@ def argmax2d(array: np.ndarray) -> Tuple[int, int]: #(x, y)
 # TODO: (y, x) for numpy, (x, y) for cv is a bit confusing. ぜんぶの[::-1]は
 # これのせいです。
 # TODO: Add return type.
-# TODO: Perhaps add ability to change w_distance (as of now, w_d = radius)
+# TODO: Perhaps add ability to change refine_distance (as of now, w_d = radius)
 lc_type = Optional[List[ndarray]]
 def detect_circle(img: ndarray, radius: int, separation_D: int,
     n_circles: int, threshold: int, kernel=ndarray,
     threshold2: int = None, last_centers: lc_type = None,
     img_center: optuple = None, crop_D: optuple = None,
-    refine=False, w_distance: float = None, show=False):
-    '''Returns (x, y) coordinates of circle on img array.'''
-    if not w_distance: w_distance = radius
+    refine=False, refine_distance: float = None, show=False):
+    '''
+    Returns (x, y) coordinates of circle on img array.
+    Parameters
+    ----------
+    img: ndarray
+        Image array.
+    radius: int
+        Circle radius.
+    n_circles: int
+        Number of circles to detect.
+    threshold: int
+        ???
+    kernel: ndarray
+        Circle detection kernel.
+    img_center: Optional[Tuple[int, int]]
+        (y, x) position from which to crop image.
+    crop_D: Optional[Tuple[int, int]]
+        (y, x) distance from center from which to crop image.
+        If None, let's image as is.
+    refine: bool
+        Optional. Whether to refine center position with brightness-weighted
+        averages.
+    refine_distance: float
+        Optional. Determines the radius of the disk used to refine center
+        position. If not provided, uses specified radius.
+    show: bool
+        ???
+    '''
+    if not refine_distance: refine_distance = radius
     if bool(crop_D) != bool(img_center):
         raise ValueError("In order to crop the image both a crop distance "
                          "and an image center must be provided.")
@@ -135,29 +162,30 @@ def detect_circle(img: ndarray, radius: int, separation_D: int,
 
     img_cropped, img_bw, edges = detect_edges(img, center=img_center,
                                            crop_D=crop_D, threshold=threshold)
-    center_filter = filter_center(edges, kernel)[0]
+    centers_filtered = filter_center(edges, kernel)[0]
     if n_circles == 1:
-        center = argmax2d(center_filter) # TODO: (x, y)!!!!!!!!!!!
-        if refine: center = refine_center(img_cropped, center, w_distance)
+        center = argmax2d(centers_filtered) # TODO: (x, y)!!!!!!!!!!!
+        if refine: center = refine_center(img_cropped, center, refine_distance)
         center = (center + center_modifier[::-1])
         centers = [center]
         img = draw_circle(img, center.astype(int), radius)
-        img = draw_circle(img, center.astype(int), w_distance)
+        img = draw_circle(img, center.astype(int), refine_distance)
     else:
-        centers, img = get_centers(img, center_filter, radius, separation_D,
-                        n_circles, center_modifier, last_centers, refine)
+        centers, img = get_centers(img, centers_filtered, radius, separation_D,
+                                   n_circles, center_modifier,
+                                   last_centers, refine)
 
     if show:
-        show_circle(img, img_bw, edges, kernel, center_filter)
-    return centers, img, img_cropped, img_bw, edges, center_filter
+        show_circle(img, img_bw, edges, kernel, centers_filtered)
+    return centers, img, img_cropped, img_bw, edges, centers_filtered
 
 def distance_squared(array1, array2):
-    '''Returnes square of separation distance between array1 and array2.'''
+    '''Returns square of separation distance between array1 and array2.'''
     x_2 = np.vectorize(lambda x: x**2)
     return sum(x_2(array1 - array2))
 
 def refine_center(img: ndarray, center: Tuple[float, float],
-                  w_distance: float) -> Tuple[float, float]:
+                  refine_distance: float) -> Tuple[float, float]:
     '''
     Improves approximation of particle center with brightness-weighted
     displacements. Center must be given in (x, y).
@@ -170,6 +198,8 @@ def refine_center(img: ndarray, center: Tuple[float, float],
     sum_intensity = 0
     i = 0
     #plt.imshow(img)
+    # TODO: This is not exactly the same algorithm as used in Volpe's
+    # Optical Tweezers. What are the advantages / disadvantages?
     while abs(weighted_x) > 0.1 or abs(weighted_y) > 0.1:
         #plt.scatter(*center, s=2, color='blue')
         recursion_limit = 100
@@ -181,7 +211,7 @@ def refine_center(img: ndarray, center: Tuple[float, float],
             for x, intensity in enumerate(row):
                 dx = x - center[0]
                 dy = y - center[1]
-                if dx**2 + dy**2 > w_distance**2:
+                if dx**2 + dy**2 > refine_distance**2:
                     continue
                 sum_intensity += intensity
                 weighted_x += dx * intensity
@@ -189,11 +219,11 @@ def refine_center(img: ndarray, center: Tuple[float, float],
         weighted_x /= sum_intensity
         weighted_y /= sum_intensity
         i += 1
-        center = center[0] + weighted_x, center[1] + weighted_x
+        center = center[0] + weighted_x, center[1] + weighted_y
     if i > 0: print(f"Refined center {i + 1} times.")
     
-    #x = np.linspace(center[0] - w_distance, center[0] + w_distance, 1000)
-    #circle_plot = lambda x: np.sqrt(w_distance**2 - (x - center[0])**2)
+    #x = np.linspace(center[0] - refine_distance, center[0] + refine_distance, 1000)
+    #circle_plot = lambda x: np.sqrt(refine_distance**2 - (x - center[0])**2)
     #plt.plot(x, circle_plot(x) + center[1], color='red')
     #plt.plot(x, -circle_plot(x) + center[1], color='red')
     #plt.scatter(*center, color='red', s=5)
@@ -203,18 +233,23 @@ def refine_center(img: ndarray, center: Tuple[float, float],
 # TODO: This is rather slow. Why? I think it's always slow on
 # micro3 when I analyze the whole image; kernel is too small compared
 # to image dimensions.
-def get_centers(img: ndarray, center_filter: ndarray, radius: int,
+def get_centers(img: ndarray, centers_filtered: ndarray, radius: int,
     separation_D: int, n_circles: int, center_modifier: ndarray,
     last_centers: lc_type = None, refine=False):
     if refine: refined_centers = []
     centers = []
-    center_filter_holed = deepcopy(center_filter)
+    centers_filtered_holed = deepcopy(centers_filtered)
+    # Finds pixel with maximum brightness in centers_filtered_holed.
+    # It then draws a black circle on top of this center with radius =
+    # separation_D. It may refine this center's position.
+    # It continues the for loop with the next brightest center.
     for _ in range(n_circles):
-        center = argmax2d(center_filter_holed)[::-1]
-        center_filter_holed = cv.circle(center_filter_holed, center,
+        center = argmax2d(centers_filtered_holed)[::-1]
+        centers_filtered_holed = cv.circle(centers_filtered_holed, center,
             radius=separation_D, color=(0, 0, 0), thickness=-1)
         if refine:
-            refined_centers.append(refine_center(center_filter_holed, center,
+            refined_centers.append(refine_center(centers_filtered_holed,
+                                                 center,
                                                  separation_D))
         center += center_modifier[::-1]
         # TODO: Change draw_circle so that it draws with matplotlib, allowing
@@ -249,18 +284,18 @@ def draw_circle(img: ndarray, center: Tuple[int, int], radius: int):
                     thickness=1)
     return img
 
-def show_circle(img, img_bw, edges, kernel, center_filter):
+def show_circle(img, img_bw, edges, kernel, centers_filtered):
     plt.style.use('dark_background')
     # Adding circle to image
     img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
 
     # Mosaic
     mosaic = [['img_bw', 'edges', 'img', 'img'],
-              ['kernel', 'center_filter', 'img', 'img']]
-    keys = ['img_bw', 'edges', 'kernel', 'center_filter', 'img']
+              ['kernel', 'centers_filtered', 'img', 'img']]
+    keys = ['img_bw', 'edges', 'kernel', 'centers_filtered', 'img']
     titles = ['Binary map', 'Edges', 'Kernel', 'Filtered center',
               'Original Image']
-    imgs = [img_bw, edges, kernel, center_filter, img]
+    imgs = [img_bw, edges, kernel, centers_filtered, img]
 
     # Plots
     fig, ax = plt.subplot_mosaic(mosaic, dpi=150, figsize=(8, 4.5))
